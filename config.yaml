@@ -1,0 +1,34 @@
+# Freedom Monitor — конфигурация
+# Этап 1: ретроспектива. Секция stage2 — заготовка живого пайплайна (не используется).
+
+aggregation:
+  monthly:
+    normalizer: 12        # N_норм для месячного Flow
+    alpha: 0.4            # EMA Level, память ~3-4 месяца
+  daily:                  # этап 2
+    normalizer: 10
+    alpha: 0.1
+  flow_clip: 5
+
+dashboard:
+  title: "Freedom Monitor — Казахстан"
+  disclaimer: "Ретроспектива по памяти модели (01.2022–01.2026) + веб-дозаполнение (02–07.2026). Температура новостного поля, не общества."
+  feed_limit: 600
+
+market:
+  usdkzt:
+    # История официального курса НБ РК. rss/get_rates.cfm отдаёт курсы на дату (fdate=DD.MM.YYYY).
+    rates_url: "https://nationalbank.kz/rss/get_rates.cfm"
+    start: "2022-01-01"
+    granularity: monthly   # для ретро тянем 1-е число каждого месяца + даты девальвационных эпизодов
+
+# stage2:                  # живой пайплайн — активируется в этапе 2
+#   openrouter:
+#     model: "anthropic/claude-sonnet-4.5"
+#     fallback_model: "google/gemini-2.5-flash"
+#   sources:               # панель финализируется probe-шагом
+#     - {name: tengrinews, rss: [...]}
+#     - {name: informburo, rss: [...]}
+#     - {name: vlast, rss: [...]}
+#     - {name: azattyq, rss: [...]}
+#     - {name: ulysmedia, rss: [...]}

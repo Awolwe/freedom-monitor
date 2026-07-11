@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freedom Monitor — Казахстан</title>
+<style>
+  :root{
+    --bg:#f6f4ef; --panel:#fffdf8; --ink:#26221c; --muted:#7a7265; --line:#e3ddd0;
+    --ff:#b04a2f;   /* давление среды */
+    --fr:#2b6a9b;   /* пространство возможностей */
+    --so:#3d7a4a;   /* солидарность */
+    --ho:#a3812c;   /* тон поля */
+    --auth:#6d4a8f; --destr:#a83a3a; --conf:#7d776d; --press:#444;
+    --flag:#c8451f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:30px;margin:0 0 4px}
+  h2{font-family:Georgia,serif;font-weight:600;font-size:21px;margin:38px 0 6px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .sub{color:var(--muted);font-size:13.5px}
+  .disclaimer{margin-top:8px;padding:9px 13px;background:#f0e9da;border-left:3px solid #b8a77e;
+              font-size:13px;color:#5c5342;border-radius:0 6px 6px 0}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+  @media(max-width:900px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .card h3{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  .pos{display:flex;gap:26px;flex-wrap:wrap}
+  .pos .val{font-size:26px;font-weight:650;font-family:Georgia,serif}
+  .pos .lbl{font-size:12.5px;color:var(--muted)}
+  .pos .delta{font-size:13px;margin-left:6px}
+  .quad-name{margin-top:10px;font-size:14px}
+  .quad-name b{font-family:Georgia,serif}
+  .sparkline-meta{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .sparkline-meta .big{font-size:24px;font-weight:650;font-family:Georgia,serif}
+  svg{display:block}
+  .chart-box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .legend{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 12px;vertical-align:baseline}
+  #tooltip{position:fixed;display:none;max-width:340px;background:#2b2621;color:#f4efe6;padding:10px 12px;
+           border-radius:8px;font-size:12.5px;line-height:1.45;pointer-events:none;z-index:50;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+  #tooltip .t-month{font-weight:650;margin-bottom:4px}
+  #tooltip .t-ev{margin-top:3px;padding-left:10px;text-indent:-10px;color:#dcd4c6}
+  /* лента */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;font-size:13.5px;align-items:center}
+  .filters select,.filters label{font-size:13.5px}
+  .filters button{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:3px 12px;cursor:pointer;font-size:13px}
+  .filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .ev{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
+  .ev summary{display:flex;gap:10px;align-items:baseline;padding:9px 14px;cursor:pointer;list-style:none;flex-wrap:wrap}
+  .ev summary::-webkit-details-marker{display:none}
+  .ev .d{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .ev .t{font-weight:600;flex:1;min-width:220px}
+  .ev .body{padding:2px 14px 12px;font-size:13.5px;color:#403a30;border-top:1px dashed var(--line)}
+  .ev .rat{margin-top:6px;color:var(--muted);font-style:italic}
+  .chip{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:10px;margin-left:4px;color:#fff;white-space:nowrap}
+  .badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:#eee7d8;color:#6b6250}
+  .badge.web{background:#dce8ee;color:#33607e}
+  .sig{color:#b08d2c;letter-spacing:1px;font-size:11px}
+  .esc-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--muted);margin-left:4px}
+  .picture{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 26px;margin-top:14px;
+           font-size:14.5px}
+  .picture h1,.picture h2{border:none;font-size:19px;margin:18px 0 4px}
+  footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Freedom Monitor — Казахстан</h1>
+  <div class="sub" id="updated"></div>
+  <div class="disclaimer" id="disclaimer"></div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Текущая позиция поля (Level)</h3>
+      <div class="pos" id="current-pos"></div>
+      <div class="quad-name" id="quad-name"></div>
+    </div>
+    <div class="card">
+      <h3>Утренний взгляд · макрофон — USD/KZT (офиц., НБ РК)</h3>
+      <div class="sparkline-meta" id="usd-meta"></div>
+      <div id="usd-spark"></div>
+      <div class="legend">Красные точки — месяцы с ослаблением тенге &gt;3%. Макрофон — контекст, не «настроение»; оси с новостными метриками не склеиваются.</div>
+    </div>
+  </div>
+
+  <h2>Фазовая траектория поля · 01.2022 — сегодня</h2>
+  <div class="sub">X: давление среды ← → освобождение · Y: эрозия ← → рост пространства возможностей.
+    Квадранты — фроммовская линза (интерпретация, не измерение). ◆ — события significance-3. Пунктир — сегмент веб-дозаполнения.</div>
+  <div class="chart-box" id="phase-box"></div>
+
+  <h2>Динамика метрик</h2>
+  <div class="sub">Линия — Level (EMA), столбики — месячный Flow. Ноль отмечен.</div>
+  <div class="grid2" id="axis-charts"></div>
+
+  <h2>Механизмы бегства (сырые счётчики, не доли)</h2>
+  <div class="sub">Теги по поведенческому кодбуку; «конформизм» — наименее надёжный тег (новости слепы к тихим явлениям). Отдельно — события давления на СМИ/активистов.</div>
+  <div class="chart-box" id="mech-box"></div>
+
+  <h2>Лента событий</h2>
+  <div class="filters" id="filters"></div>
+  <div id="feed"></div>
+
+  <h2>Картина страны</h2>
+  <div class="picture"><!--__PICTURE__--></div>
+
+  <footer id="footer"></footer>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+/*__DATA__*/
+
+/* ---------- утилиты ---------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+function el(name, attrs, parent){
+  const e = document.createElementNS(SVGNS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function div(cls, parent){ const d=document.createElement("div"); if(cls)d.className=cls; if(parent)parent.appendChild(d); return d; }
+const AXES = [
+  {key:"freedom_from", name:"Давление среды ↔ освобождение", color:"var(--ff)", raw:"#b04a2f"},
+  {key:"freedom_for",  name:"Пространство возможностей",     color:"var(--fr)", raw:"#2b6a9b"},
+  {key:"solidarity",   name:"Атомизация ↔ солидарность",     color:"var(--so)", raw:"#3d7a4a"},
+  {key:"hope",         name:"Эмоциональный тон поля",        color:"var(--ho)", raw:"#a3812c"},
+];
+const MECHS = [
+  {key:"esc_authoritarianism", name:"авторитаризм", color:"#6d4a8f"},
+  {key:"esc_destructiveness",  name:"деструктивность", color:"#a83a3a"},
+  {key:"esc_conformity",       name:"конформизм (ненадёжно)", color:"#7d776d"},
+  {key:"press_pressure_n",     name:"давление на СМИ/активистов", color:"#444"},
+];
+const CHIP_LABEL = {freedom_from:"Среда", freedom_for:"Возм.", solidarity:"Солид.", hope:"Тон"};
+const ESC_RU = {authoritarianism:"авторитаризм", destructiveness:"деструктивность", conformity:"конформизм"};
+const M = DATA.monthly, EV = DATA.events;
+const tt = document.getElementById("tooltip");
+function showTT(html, x, y){
+  tt.innerHTML = html; tt.style.display="block";
+  const w = tt.offsetWidth, h = tt.offsetHeight;
+  tt.style.left = Math.min(x+14, innerWidth-w-10)+"px";
+  tt.style.top  = (y+14+h > innerHeight ? y-h-10 : y+14)+"px";
+}
+function hideTT(){ tt.style.display="none"; }
+function monthLabel(m){
+  const [y,mm]=m.split("-");
+  const names=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  return names[+mm-1]+" "+y;
+}
+function fmt(v){ return (v>0?"+":"")+v.toFixed(2); }
+function topEvents(month, n){
+  return EV.filter(e=>e.month===month).sort((a,b)=>b.sig-a.sig).slice(0,n);
+}
+function monthTooltip(r){
+  let h = `<div class="t-month">${monthLabel(r.month)}</div>`;
+  h += `среда ${fmt(r.level_freedom_from)} · возможности ${fmt(r.level_freedom_for)}<br>`;
+  h += `солидарность ${fmt(r.level_solidarity)} · тон ${fmt(r.level_hope)}`;
+  for (const e of topEvents(r.month,3)) h += `<div class="t-ev">• ${e.title}</div>`;
+  return h;
+}
+
+/* ---------- шапка ---------- */
+document.getElementById("updated").textContent =
+  `Собрано ${DATA.generated_at} · событий: ${DATA.quality.n_events} · EMA α=${DATA.alpha_month} (месячная)`;
+document.getElementById("disclaimer").textContent = DATA.disclaimer;
+
+(function currentPos(){
+  const last = M[M.length-1], prev = M[Math.max(0,M.length-4)];
+  const box = document.getElementById("current-pos");
+  for (const a of [AXES[0], AXES[1]]){
+    const v = last["level_"+a.key], d = v - prev["level_"+a.key];
+    const c = div("", box);
+    c.innerHTML = `<div class="lbl">${a.name}</div>
+      <span class="val" style="color:${a.raw}">${fmt(v)}</span>
+      <span class="delta" style="color:${d>=0?"#3d7a4a":"#a83a3a"}">${d>=0?"▲":"▼"} ${fmt(d)} за 3 мес</span>`;
+  }
+  const x = last.level_freedom_from, y = last.level_freedom_for;
+  const q = x>=0 ? (y>=0?"освобождение и рост":"негативная свобода без опоры")
+                 : (y>=0?"развитие без свободы":"сжатие");
+  document.getElementById("quad-name").innerHTML =
+    `Квадрант (фроммовская линза): <b>«${q}»</b> — ${monthLabel(last.month)}`;
+})();
+
+/* ---------- USD/KZT спарклайн ---------- */
+(function usd(){
+  const s = DATA.market;
+  if (!s || s.length < 2){ document.getElementById("usd-meta").textContent="нет данных (API НБ РК недоступен)"; return; }
+  const last=s[s.length-1], prev=s[s.length-2];
+  const d = last.usdkzt_official - prev.usdkzt_official;
+  document.getElementById("usd-meta").innerHTML =
+    `<span class="big">${last.usdkzt_official.toFixed(2)} ₸</span>
+     <span style="color:${d>0?"#a83a3a":"#3d7a4a"}">${d>0?"▲":"▼"} ${Math.abs(d).toFixed(2)}</span>
+     <span class="sub">${last.date}</span>`;
+  const W=480,H=88,P=6;
+  const vals=s.map(r=>r.usdkzt_official);
+  const mn=Math.min(...vals), mx=Math.max(...vals);
+  const X=i=>P+(W-2*P)*i/(s.length-1), Y=v=>H-P-(H-2*P)*(v-mn)/(mx-mn||1);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H});
+  el("path",{d:s.map((r,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(r.usdkzt_official).toFixed(1)).join(" "),
+             fill:"none",stroke:"#5c5342","stroke-width":1.6},svg);
+  s.forEach((r,i)=>{
+    if(i>0 && r.usdkzt_official/s[i-1].usdkzt_official>1.03)
+      el("circle",{cx:X(i),cy:Y(r.usdkzt_official),r:3.4,fill:"#a83a3a"},svg);
+  });
+  el("text",{x:P,y:12,"font-size":10,fill:"#7a7265"},svg).textContent=mx.toFixed(0);
+  el("text",{x:P,y:H-2,"font-size":10,fill:"#7a7265"},svg).textContent=mn.toFixed(0);
+  document.getElementById("usd-spark").appendChild(svg);
+})();
+
+/* ---------- фазовая траектория ---------- */
+(function phase(){
+  const W=760,H=560,P=54;
+  const xs=M.map(r=>r.level_freedom_from), ys=M.map(r=>r.level_freedom_for);
+  const dom=Math.max(1, Math.max(...xs.map(Math.abs), ...ys.map(Math.abs))*1.25);
+  const X=v=>P+(W-2*P)*(v+dom)/(2*dom), Y=v=>H-P-(H-2*P)*(v+dom)/(2*dom);
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%"});
+  // квадранты
+  el("rect",{x:P,y:P,width:W-2*P,height:H-2*P,fill:"#fbf9f3",stroke:"var(--line)"},svg);
+  el("line",{x1:X(0),y1:P,x2:X(0),y2:H-P,stroke:"#d8d0bf"},svg);
+  el("line",{x1:P,y1:Y(0),x2:W-P,y2:Y(0),stroke:"#d8d0bf"},svg);
+  const ql=[["освобождение и рост",X(dom*0.52),Y(dom*0.86)],["негативная свобода без опоры",X(dom*0.52),Y(-dom*0.9)],
+            ["развитие без свободы",X(-dom*0.55),Y(dom*0.86)],["сжатие",X(-dom*0.55),Y(-dom*0.9)]];
+  for(const [t,x,y] of ql) el("text",{x,y,"font-size":12,fill:"#b4a98f","text-anchor":"middle","font-style":"italic"},svg).textContent=t;
+  el("text",{x:W-P,y:Y(0)-6,"font-size":11.5,fill:"#7a7265","text-anchor":"end"},svg).textContent="освобождение →";
+  el("text",{x:P+2,y:Y(0)-6,"font-size":11.5,fill:"#7a7265"},svg).textContent="← давление";
+  el("text",{x:X(0)+6,y:P+14,"font-size":11.5,fill:"#7a7265"},svg).textContent="↑ возможности растут";
+  el("text",{x:X(0)+6,y:H-P-6,"font-size":11.5,fill:"#7a7265"},svg).textContent="↓ возможности сужаются";
+  // сегменты с градиентом времени
+  const col=i=>{const t=i/(M.length-1);const L=78-t*52;return `hsl(18 45% ${L}%)`;};
+  for(let i=1;i<M.length;i++){
+    el("line",{x1:X(xs[i-1]),y1:Y(ys[i-1]),x2:X(xs[i]),y2:Y(ys[i]),stroke:col(i),"stroke-width":2,
+       ...(hasWeb(M[i].month)?{"stroke-dasharray":"5 4"}:{})},svg);
+  }
+  // точки + флаги
+  M.forEach((r,i)=>{
+    const web=hasWeb(r.month);
+    const c=el("circle",{cx:X(xs[i]),cy:Y(ys[i]),r: i===M.length-1?6:4,
+      fill:web?"#fff":col(i),stroke:col(i),"stroke-width":web?2:1,cursor:"pointer"},svg);
+    c.addEventListener("mousemove",e=>showTT(monthTooltip(r),e.clientX,e.clientY));
+    c.addEventListener("mouseleave",hideTT);
+    if(r.month.endsWith("-01"))
+      el("text",{x:X(xs[i])+7,y:Y(ys[i])-7,"font-size":11,fill:"#5c5342","font-weight":600},svg).textContent=r.month.slice(0,4);
+    const flags=EV.filter(e=>e.month===r.month&&e.sig===3);
+    if(flags.length){
+      const f=el("path",{d:`M ${X(xs[i])} ${Y(ys[i])-14} l 5 6 l -5 6 l -5 -6 Z`,fill:"var(--flag)",cursor:"pointer",opacity:.85},svg);
+      f.addEventListener("mousemove",e=>showTT(
+        `<div class="t-month">${monthLabel(r.month)} — significance 3</div>`+flags.map(x=>`<div class="t-ev">◆ ${x.title}</div>`).join(""),
+        e.clientX,e.clientY));
+      f.addEventListener("mouseleave",hideTT);
+    }
+  });
+  document.getElementById("phase-box").appendChild(svg);
+  function hasWeb(m){ return EV.some(e=>e.month===m && e.origin==="web_research"); }
+})();
+
+/* ---------- динамика метрик ---------- */
+(function axisCharts(){
+  const box=document.getElementById("axis-charts");
+  const W=540,H=170,P=26,PB=22;
+  for(const a of AXES){
+    const wrap=div("chart-box",box);
+    wrap.style.marginTop="0";
+    const flows=M.map(r=>r[a.key]), levels=M.map(r=>r["level_"+a.key]);
+    const dom=Math.max(1, Math.max(...flows.map(Math.abs), ...levels.map(Math.abs))*1.2);
+    const X=i=>P+(W-P-8)*i/(M.length-1), Y=v=>(H-PB)/2 - v*((H-PB)/2-P/2)/dom + PB/2;
+    const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%"});
+    el("text",{x:P,y:14,"font-size":13,"font-weight":600,fill:a.raw},svg).textContent=a.name;
+    el("line",{x1:P,y1:Y(0),x2:W-8,y2:Y(0),stroke:"#d8d0bf"},svg);
+    const bw=Math.max(2,(W-P-8)/M.length-2);
+    M.forEach((r,i)=>{
+      const v=r[a.key]; if(Math.abs(v)<0.01) return;
+      el("rect",{x:X(i)-bw/2,y:Math.min(Y(0),Y(v)),width:bw,height:Math.abs(Y(v)-Y(0)),fill:a.raw,opacity:.28},svg);
+    });
+    el("path",{d:levels.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join(" "),
+       fill:"none",stroke:a.raw,"stroke-width":2.2},svg);
+    M.forEach((r,i)=>{
+      if(r.month.endsWith("-01"))
+        el("text",{x:X(i),y:H-4,"font-size":10,fill:"#9a917f","text-anchor":"middle"},svg).textContent=r.month.slice(0,4);
+      const hit=el("rect",{x:X(i)-((W-P-8)/M.length)/2,y:0,width:(W-P-8)/M.length,height:H,fill:"transparent"},svg);
+      hit.addEventListener("mousemove",e=>showTT(monthTooltip(r),e.clientX,e.clientY));
+      hit.addEventListener("mouseleave",hideTT);
+    });
+    wrap.appendChild(svg);
+  }
+})();
+
+/* ---------- механизмы ---------- */
+(function mechs(){
+  const box=document.getElementById("mech-box");
+  const W=1100,rowH=56,P=150;
+  const maxC=Math.max(1,...M.flatMap(r=>MECHS.map(m=>r[m.key])));
+  const svg=el("svg",{viewBox:`0 0 ${W} ${rowH*MECHS.length+24}`,width:"100%"});
+  MECHS.forEach((mech,ri)=>{
+    const y0=ri*rowH+10;
+    el("text",{x:4,y:y0+rowH/2,"font-size":12.5,fill:mech.color,"font-weight":600},svg).textContent=mech.name;
+    const bw=Math.max(2,(W-P-10)/M.length-2);
+    M.forEach((r,i)=>{
+      const c=r[mech.key]; const x=P+(W-P-10)*i/(M.length-1);
+      el("line",{x1:P,y1:y0+rowH-14,x2:W-10,y2:y0+rowH-14,stroke:"#eee7d8"},svg);
+      if(c>0){
+        const h=(rowH-22)*c/maxC;
+        const rect=el("rect",{x:x-bw/2,y:y0+rowH-14-h,width:bw,height:h,fill:mech.color,opacity:.75},svg);
+        rect.addEventListener("mousemove",e=>showTT(`<div class="t-month">${monthLabel(r.month)}</div>${mech.name}: ${c}`,e.clientX,e.clientY));
+        rect.addEventListener("mouseleave",hideTT);
+      }
+      if(ri===MECHS.length-1 && r.month.endsWith("-01"))
+        el("text",{x:x,y:rowH*MECHS.length+20,"font-size":10,fill:"#9a917f","text-anchor":"middle"},svg).textContent=r.month.slice(0,4);
+    });
+  });
+  box.appendChild(svg);
+})();
+
+/* ---------- лента ---------- */
+(function feed(){
+  const years=[...new Set(EV.map(e=>e.date.slice(0,4)))].sort();
+  const cats=[...new Set(EV.map(e=>e.category))].sort();
+  const state={year:"все",cat:"все",sig3:false,origin:"все"};
+  const f=document.getElementById("filters");
+  const yWrap=div("",f);
+  for(const y of ["все",...years]){
+    const b=document.createElement("button"); b.textContent=y;
+    if(y===state.year)b.classList.add("on");
+    b.onclick=()=>{state.year=y;[...yWrap.children].forEach(x=>x.classList.toggle("on",x.textContent===y));render();};
+    yWrap.appendChild(b);
+  }
+  const catSel=document.createElement("select");
+  catSel.innerHTML=["все",...cats].map(c=>`<option>${c}</option>`).join("");
+  catSel.onchange=()=>{state.cat=catSel.value;render();}; f.appendChild(catSel);
+  const orSel=document.createElement("select");
+  orSel.innerHTML=`<option value="все">любой источник</option><option value="model_memory">память модели</option><option value="web_research">веб-дозаполнение</option>`;
+  orSel.onchange=()=>{state.origin=orSel.value;render();}; f.appendChild(orSel);
+  const lb=document.createElement("label");
+  lb.innerHTML=`<input type="checkbox"> только significance 3`;
+  lb.querySelector("input").onchange=e=>{state.sig3=e.target.checked;render();}; f.appendChild(lb);
+  const count=document.createElement("span"); count.className="sub"; f.appendChild(count);
+
+  const feedBox=document.getElementById("feed");
+  function chips(e){
+    let h="";
+    for(const a of AXES){
+      const v=e.scores[a.key]; if(!v)continue;
+      h+=`<span class="chip" style="background:${a.raw}">${CHIP_LABEL[a.key]} ${v>0?"+":""}${v}</span>`;
+    }
+    return h;
+  }
+  function render(){
+    let list=EV;
+    if(state.year!=="все") list=list.filter(e=>e.date.slice(0,4)===state.year);
+    if(state.cat!=="все") list=list.filter(e=>e.category===state.cat);
+    if(state.origin!=="все") list=list.filter(e=>e.origin===state.origin);
+    if(state.sig3) list=list.filter(e=>e.sig===3);
+    count.textContent=` показано: ${list.length}`;
+    feedBox.innerHTML="";
+    for(const e of list){
+      const d=document.createElement("details"); d.className="ev";
+      const esc=e.escape.map(m=>`<span class="esc-tag">${ESC_RU[m]}</span>`).join("");
+      const press=e.press?`<span class="esc-tag" style="border-color:#b77;color:#a55">пресса</span>`:"";
+      const web=e.origin==="web_research"?`<span class="badge web">веб</span>`:"";
+      d.innerHTML=`<summary>
+          <span class="d">${e.date}</span>
+          <span class="sig">${"●".repeat(e.sig)}${"○".repeat(3-e.sig)}</span>
+          <span class="t">${e.title}</span>
+          <span class="badge">${e.category}</span>${web}${chips(e)}${esc}${press}
+        </summary>
+        <div class="body">${e.summary||""}
+          ${e.rationale?`<div class="rat">${e.rationale}</div>`:""}
+          <div class="sub" style="margin-top:4px">${e.region} · ${e.id}</div>
+        </div>`;
+      feedBox.appendChild(d);
+    }
+  }
+  render();
+})();
+
+/* ---------- подвал ---------- */
+(function footer(){
+  const q=DATA.quality;
+  const zs=Object.entries(q.zero_share).map(([k,v])=>`${CHIP_LABEL[k]}: ${(v*100).toFixed(0)}%`).join(" · ");
+  document.getElementById("footer").innerHTML =
+    `Рамка: температура новостного поля, не общество. Ретро — память модели; 02–07.2026 — веб-дозаполнение.<br>
+     Диагностика: событий ${q.n_events}, significance-3: ${q.sig3}, доля нулей по осям (${zs})${q.thin_months.length?`, тонкие месяцы: ${q.thin_months.join(", ")}`:""}.<br>
+     Кодбук: METHODOLOGY.md, prompt_version 1.0. EMA α=${DATA.alpha_month}. Квадрантная гипотеза предрегистрирована (§6) и в скоринге не участвует.`;
+})();
+</script>
+</body>
+</html>
