@@ -381,12 +381,26 @@ document.getElementById("disclaimer").textContent = DATA.disclaimer;
 
 /* ---------- подвал ---------- */
 (function footer(){
-  const q=DATA.quality;
-  const zs=Object.entries(q.zero_share).map(([k,v])=>`${CHIP_LABEL[k]}: ${(v*100).toFixed(0)}%`).join(" · ");
+  const q=DATA.quality, pct=v=>`${(v*100).toFixed(0)}%`;
+  const zs=Object.entries(q.zero_share).map(([k,v])=>`${CHIP_LABEL[k]}: ${pct(v)}`).join(" · ");
+  const esc=Object.entries(q.escape_counts).map(([k,v])=>`${k} ${v}`).join(", ");
+
+  const rel=DATA.reliability;
+  const relLine = rel
+    ? `Надёжность кодирования: двойное кодирование ${rel.n_common} событий (${pct(rel.coverage)} корпуса), ` +
+      `точное совпадение по осям ` +
+      Object.entries(rel.axes).map(([a,s])=>`${CHIP_LABEL[a]} ${pct(s.exact)}`).join(" · ") +
+      `. <strong>Оба прохода — одна модель</strong>, поэтому это оценка самосогласованности, ` +
+      `а не надёжности схемы: верхняя граница, не свидетельство валидности (RELIABILITY.md).`
+    : `Надёжность кодирования не измерена.`;
+
   document.getElementById("footer").innerHTML =
     `Рамка: температура новостного поля, не общество. Ретро — память модели; 02–07.2026 — веб-дозаполнение.<br>
      Диагностика: событий ${q.n_events}, significance-3: ${q.sig3}, доля нулей по осям (${zs})${q.thin_months.length?`, тонкие месяцы: ${q.thin_months.join(", ")}`:""}.<br>
-     Кодбук: METHODOLOGY.md, prompt_version 1.0. EMA α=${DATA.alpha_month}. Квадрантная гипотеза предрегистрирована (§6) и в скоринге не участвует.`;
+     Событий без единой ненулевой оси: ${pct(q.all_zero_share)}. Теги механизмов бегства: ${pct(q.escape_share)} событий (${esc}) — кодбук §3 ждёт 5–10%; теги концентрируются в месяцах госконсолидации и потому коррелируют с «давлением среды» по построению.<br>
+     Заземление на источник: URL есть у ${pct(q.grounded_share)} событий — у остальных подтверждения нет, это память модели.<br>
+     ${relLine}<br>
+     Кодбук: METHODOLOGY.md, prompt_version ${DATA.prompt_version}. EMA α=${DATA.alpha_month}. Квадрантная гипотеза предрегистрирована (§6) и в скоринге не участвует.`;
 })();
 </script>
 </body>

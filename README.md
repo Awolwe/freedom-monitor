@@ -12,16 +12,34 @@
 .\.venv\Scripts\python.exe run.py --rebuild-dashboard   # пересборка дашборда из data/
 .\.venv\Scripts\python.exe run.py --validate            # только валидация событий
 .\.venv\Scripts\python.exe run.py --market              # дотянуть курс USD/KZT из API НБ РК
+.\.venv\Scripts\python.exe -m pytest tests/ -q          # тесты агрегации, пере-скоринга, надёжности
+```
+
+Пере-скоринг и проверка надёжности:
+
+```powershell
+.\.venv\Scripts\python.exe run.py --rescore data\patches\ФАЙЛ.jsonl --out data\events_vN.jsonl --version N
+.\.venv\Scripts\python.exe run.py --reliability data\events_v1.1.jsonl data\reliability\pass_b.jsonl
 ```
 
 ## Данные (этап 1 — ретроспектива)
 
-- `data/events_backfill.jsonl` — 266 событий: 01.2022–01.2026 из памяти модели (Claude, `origin=model_memory`),
-  02–07.2026 — веб-дозаполнение (`origin=web_research`). Сгенерировано батчами по годам,
-  прошло сквозную вычитку консистентности (дубли удалены, 8 патчей по кодбуку).
-- `data/backfill/` — исходные файлы генерации (аудит-след до мерджа).
-- `data/market_daily.jsonl` — официальный курс USD/KZT, API НБ РК (реальные данные, не память).
-- `data/picture.md` — статическая «картина страны» на июль 2026.
+Активный ряд задан в `config.yaml` (`data.events_file`). Ряды версионируются: каждый
+пере-скоринг пишет новый файл, предыдущий остаётся аудит-следом (METHODOLOGY §8).
+
+| Файл | Что это |
+|---|---|
+| `data/events_backfill.jsonl` | v1.0, 266 событий: 01.2022–01.2026 из памяти модели (`origin=model_memory`), 02–07.2026 — веб-дозаполнение (`origin=web_research`) |
+| `data/events_v1.1.jsonl` | пере-скоринг: теги §3, демаркация осей §1.2/§1.3 |
+| `data/events_v1.2.jsonl` | адъюдикация расхождений после проверки надёжности |
+| `data/events_v1.3.jsonl` | заземление на источники: `source_url`, `verified`, правка дат |
+| `data/events_v1.4.jsonl` | добавлены пропуски корпуса, найденные сверкой |
+| **`data/events_v1.5.jsonl`** | **активный** — 280 событий, добор тонких месяцев |
+| `data/patches/` | patch-файлы каждого шага: что изменено и почему |
+| `data/reliability/pass_b.jsonl` | слепой повторный скоринг выборки 40 событий |
+| `data/backfill/` | исходные файлы генерации v1.0 |
+| `data/market_daily.jsonl` | официальный курс USD/KZT, API НБ РК (реальные данные, не память) |
+| `data/picture.md` | статическая «картина страны» на июль 2026 |
 
 ## Методология
 
@@ -29,7 +47,10 @@
 поведенческий кодбук тегов, формулы Flow/Level, предрегистрированная квадрантная гипотеза,
 рамка «температура новостного поля, не общество».
 
+Надёжность кодирования — `RELIABILITY.md`. Читать вместе с кодбуком: там же сказано,
+чем измеренное согласие **не** является.
+
 ## Этап 2 (не реализован)
 
-Живой ежедневный пайплайн: сбор новостей 5 СМИ → скоринг через OpenRouter → продолжение кривой
-дневными точками. План: `C:\Users\SK-User\.claude\plans\distributed-napping-pearl.md` (раздел «Этап 2»).
+Живой ежедневный пайплайн: сбор новостей 5 СМИ → скоринг → продолжение кривой дневными точками.
+План: [STAGE2.md](STAGE2.md).

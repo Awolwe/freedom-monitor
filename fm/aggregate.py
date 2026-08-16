@@ -41,6 +41,9 @@ class Event(BaseModel):
     rationale: str = ""
     origin: str = "model_memory"
     prompt_version: str = "1.0"
+    # заземление на источник (см. METHODOLOGY §5): проставляется проходом верификации
+    source_url: str = ""
+    verified: Literal["", "confirmed", "corrected", "unconfirmed"] = ""
 
     @field_validator("month")
     @classmethod
@@ -86,6 +89,15 @@ def data_quality(events: list[Event]) -> dict:
         "per_month": per_month,
         "sig3": sum(1 for e in events if e.significance == 3),
         "thin_months": [m for m, c in per_month.items() if c < 3],
+        # §3 ждёт 10-25% тегированных событий; §1.1 — 60-80% нулей по осям
+        "escape_share": sum(1 for e in events if e.escape) / max(n, 1),
+        "escape_counts": {m: sum(1 for e in events if m in e.escape) for m in MECHANISMS},
+        "all_zero_share": sum(1 for e in events if not e.nonzero_axes()) / max(n, 1),
+        "grounded_share": sum(1 for e in events if e.source_url) / max(n, 1),
+        "verified_counts": {
+            v: sum(1 for e in events if e.verified == v)
+            for v in ("confirmed", "corrected", "unconfirmed")
+        },
     }
 
 
