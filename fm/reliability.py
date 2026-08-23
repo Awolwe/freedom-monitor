@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -149,14 +150,43 @@ def compare(pass_a: list[Event], pass_b: list[Event]) -> dict:
     }
 
 
+def load_pass(path: Path, corpus: dict[str, Event]) -> list[Event]:
+    """Проход кодировщика. Принимает и полные события, и записи «только оценки»
+    (`id` + `scores` + `significance` + `escape` + `press_pressure`) — второй формат
+    удобнее отдавать стороннему кодировщику: ему незачем переписывать заголовки
+    и описания, а лишние поля в его файле — лишний повод для расхождений.
+    """
+    events, errors = [], []
+    with open(path, encoding="utf-8") as f:
+        for n, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            raw = json.loads(line)
+            if "date" not in raw:  # запись «только оценки» — достраиваем из корпуса
+                eid = raw.get("id")
+                if eid not in corpus:
+                    errors.append(f"{path.name}:{n}: id {eid!r} нет в корпусе")
+                    continue
+                raw = {**corpus[eid].model_dump(), **raw}
+            try:
+                events.append(Event.model_validate(raw))
+            except Exception as exc:
+                errors.append(f"{path.name}:{n}: {exc}")
+    if errors:
+        raise ValueError(f"невалидный проход {path.name}: {errors[:3]}")
+    return events
+
+
 def compare_files(base: Path, path_a: Path, path_b: Path) -> dict:
-    a, err_a = load_events(path_a)
-    b, err_b = load_events(path_b)
-    if err_a or err_b:
-        raise ValueError(f"невалидные проходы: {(err_a + err_b)[:3]}")
+    corpus_list, err = load_events(base) if base.exists() else ([], [])
+    if err:
+        raise ValueError(f"невалидный корпус {base.name}: {err[:3]}")
+    corpus = {e.id: e for e in corpus_list}
+    a = load_pass(path_a, corpus)
+    b = load_pass(path_b, corpus)
     report = compare(a, b)
-    if base.exists():
-        corpus, _ = load_events(base)
+    if corpus:
         report["corpus_n"] = len(corpus)
         report["coverage"] = report["n_common"] / max(len(corpus), 1)
     report["files"] = {"a": path_a.name, "b": path_b.name}

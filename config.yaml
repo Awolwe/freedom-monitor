@@ -3,7 +3,7 @@
 
 data:
   # Активный ряд. Пере-скоринг (--rescore) пишет новый файл; старый остаётся аудит-следом (§8).
-  events_file: data/events_v1.5.jsonl
+  events_file: data/events_v1.9.jsonl
 
 aggregation:
   monthly:

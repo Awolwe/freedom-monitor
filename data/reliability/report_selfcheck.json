@@ -232,49 +232,49 @@
  "axes": {
   "freedom_from": {
    "n": 40,
-   "exact": 0.775,
+   "exact": 1.0,
    "within1": 1.0,
-   "alpha": 0.9170202300674336,
-   "n_signal": 16,
-   "sign_agreement": 0.8125,
-   "both_nonzero": 13
+   "alpha": 1.0,
+   "n_signal": 14,
+   "sign_agreement": 1.0,
+   "both_nonzero": 14
   },
   "freedom_for": {
    "n": 40,
-   "exact": 0.875,
-   "within1": 0.975,
-   "alpha": 0.842425002279566,
-   "n_signal": 7,
-   "sign_agreement": 0.7142857142857143,
-   "both_nonzero": 5
+   "exact": 0.925,
+   "within1": 1.0,
+   "alpha": 0.8773451084775689,
+   "n_signal": 8,
+   "sign_agreement": 0.75,
+   "both_nonzero": 6
   },
   "solidarity": {
    "n": 40,
-   "exact": 0.925,
+   "exact": 1.0,
    "within1": 1.0,
-   "alpha": 0.92326026996797,
-   "n_signal": 8,
-   "sign_agreement": 0.875,
+   "alpha": 1.0,
+   "n_signal": 7,
+   "sign_agreement": 1.0,
    "both_nonzero": 7
   },
   "hope": {
    "n": 40,
-   "exact": 0.5,
+   "exact": 1.0,
    "within1": 1.0,
-   "alpha": 0.7950195862647225,
-   "n_signal": 28,
-   "sign_agreement": 0.5357142857142857,
+   "alpha": 1.0,
+   "n_signal": 15,
+   "sign_agreement": 1.0,
    "both_nonzero": 15
   }
  },
  "tags": {
   "authoritarianism": {
    "n": 40,
-   "both": 0,
-   "only_a": 2,
+   "both": 2,
+   "only_a": 0,
    "only_b": 0,
-   "jaccard": 0.0,
-   "alpha": -0.012820512820512997,
+   "jaccard": 1.0,
+   "alpha": 1.0,
    "stable": false
   },
   "destructiveness": {
@@ -297,24 +297,24 @@
   },
   "press_pressure": {
    "n": 40,
-   "both": 5,
-   "only_a": 3,
+   "both": 8,
+   "only_a": 0,
    "only_b": 0,
-   "jaccard": 0.625,
-   "alpha": 0.7278989667049369,
+   "jaccard": 1.0,
+   "alpha": 1.0,
    "stable": true
   }
  },
  "significance": {
-  "exact": 0.65,
+  "exact": 0.975,
   "within1": 1.0,
-  "alpha": 0.5933823529411766
+  "alpha": 0.971569950517319
  },
  "corpus_n": 266,
  "coverage": 0.15037593984962405,
  "files": {
   "a": "events_v1.1.jsonl",
-  "b": "pass_c.jsonl"
+  "b": "pass_b.jsonl"
  },
- "note": "проход C — независимая модель по тому же кодбуку"
+ "note": "проход B — та же модель, что и A: самосогласованность, верхняя граница"
 }

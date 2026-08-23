@@ -76,8 +76,12 @@ def load_events(path: Path) -> tuple[list[Event], list[str]]:
     return events, errors
 
 
-def data_quality(events: list[Event]) -> dict:
-    """Диагностика распределения: доля нулей по осям, покрытие месяцев."""
+def data_quality(events: list[Event], now_month: str = "") -> dict:
+    """Диагностика распределения: доля нулей по осям, покрытие месяцев.
+
+    `now_month` (YYYY-MM) — текущий месяц: он ещё идёт, поэтому малое число событий
+    в нём не дефект покрытия, и в список тонких месяцев он не попадает.
+    """
     n = len(events)
     zero_share = {a: sum(1 for e in events if getattr(e.scores, a) == 0) / max(n, 1) for a in AXES}
     months = sorted({e.month for e in events})
@@ -88,11 +92,17 @@ def data_quality(events: list[Event]) -> dict:
         "months": months,
         "per_month": per_month,
         "sig3": sum(1 for e in events if e.significance == 3),
-        "thin_months": [m for m, c in per_month.items() if c < 3],
+        "thin_months": [m for m, c in per_month.items() if c < 3 and m != now_month],
+        "current_month": now_month if now_month in per_month else "",
         # §3 ждёт 10-25% тегированных событий; §1.1 — 60-80% нулей по осям
         "escape_share": sum(1 for e in events if e.escape) / max(n, 1),
         "escape_counts": {m: sum(1 for e in events if m in e.escape) for m in MECHANISMS},
         "all_zero_share": sum(1 for e in events if not e.nonzero_axes()) / max(n, 1),
+        # Реальная база измерения: событие без единой ненулевой оси не влияет ни на одну
+        # метрику, а на конкретной оси работают только события с ненулевой оценкой по ней.
+        # n_events заметно завышает то, на чём стоит кривая.
+        "effective_n": sum(1 for e in events if e.nonzero_axes()),
+        "effective_n_axis": {a: sum(1 for e in events if getattr(e.scores, a) != 0) for a in AXES},
         "grounded_share": sum(1 for e in events if e.source_url) / max(n, 1),
         "verified_counts": {
             v: sum(1 for e in events if e.verified == v)
@@ -116,6 +126,28 @@ def monthly_flow(events: list[Event], normalizer: float = 12.0, clip: float = 5.
         row["press_pressure_n"] = sum(1 for e in evs if e.press_pressure)
         rows.append(row)
     return rows
+
+
+def inertia(flow_rows: list[dict]) -> dict[str, dict]:
+    """Месяцы, где Level держится только памятью EMA: Flow = 0, а линия не в нуле.
+
+    Такой месяц ничего не сообщает о поле — он показывает затухание прошлого.
+    На разреженных осях таких месяцев большинство, и без пометки кривая читается
+    как непрерывное наблюдение, которым не является. Требует add_levels.
+    """
+    out = {}
+    for a in AXES:
+        idle = [r["month"] for r in flow_rows if r[a] == 0 and abs(r.get(f"level_{a}", 0)) > 1e-9]
+        # месяцы, где поле двинулось против сглаженной линии
+        against = [r["month"] for r in flow_rows
+                   if r[a] != 0 and r.get(f"level_{a}", 0) != 0
+                   and (r[a] > 0) != (r[f"level_{a}"] > 0)]
+        out[a] = {
+            "idle_months": idle,
+            "idle_share": len(idle) / max(len(flow_rows), 1),
+            "against_months": against,
+        }
+    return out
 
 
 def ema(values: list[float], alpha: float) -> list[float]:

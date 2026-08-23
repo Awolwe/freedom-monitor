@@ -47,16 +47,21 @@ def test_load_reliability_absent_returns_none(tmp_path, monkeypatch):
     assert dashboard.load_reliability() is None
 
 
-def test_load_reliability_reads_snapshot_and_flags_same_model(tmp_path, monkeypatch):
+def test_load_reliability_reads_snapshot_including_significance_and_note(tmp_path, monkeypatch):
     snap = tmp_path / "report.json"
     snap.write_text(json.dumps({
         "n_common": 40, "coverage": 0.15,
-        "axes": {"hope": {"exact": 0.925, "alpha": 0.88}},
+        "axes": {"hope": {"exact": 0.5, "alpha": 0.80}},
+        "significance": {"exact": 0.65},
+        "note": "проход C — независимая модель",
     }), encoding="utf-8")
     monkeypatch.setattr(dashboard, "RELIABILITY", snap)
     rel = dashboard.load_reliability()
-    assert rel["n_common"] == 40 and rel["axes"]["hope"]["exact"] == 0.925
-    assert rel["same_model"] is True, "дашборд обязан подписать, что это самосогласованность"
+    assert rel["n_common"] == 40 and rel["axes"]["hope"]["exact"] == 0.5
+    assert rel["significance"] == 0.65, "значимость — множитель Flow, её согласие обязано быть видно"
+    assert rel["note"] == "проход C — независимая модель", (
+        "подпись о том, кто был вторым кодировщиком, не должна быть зашита в шаблон"
+    )
 
 
 # --- build_data ------------------------------------------------------------

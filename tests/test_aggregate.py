@@ -265,3 +265,28 @@ def test_repository_event_ids_are_unique():
     events, _ = load_events(path)
     ids = [e.id for e in events]
     assert len(ids) == len(set(ids))
+
+
+# --- текущий месяц ---------------------------------------------------------
+
+def test_current_month_is_not_reported_as_thin():
+    """Идущий месяц не дефект покрытия: он просто не закончился."""
+    evs = [mk("a", "2026-08-01"), mk("b", "2026-07-01"), mk("c", "2026-07-02"), mk("d", "2026-07-03")]
+    q = data_quality(evs, now_month="2026-08")
+    assert q["thin_months"] == []
+    assert q["current_month"] == "2026-08"
+
+
+def test_past_thin_month_is_still_reported():
+    evs = [mk("a", "2026-08-01"), mk("b", "2026-05-01")]
+    assert data_quality(evs, now_month="2026-08")["thin_months"] == ["2026-05"]
+
+
+def test_current_month_absent_from_data_is_not_claimed():
+    evs = [mk("a", "2026-07-01"), mk("b", "2026-07-02"), mk("c", "2026-07-03")]
+    assert data_quality(evs, now_month="2026-08")["current_month"] == ""
+
+
+def test_without_now_month_every_thin_month_is_reported():
+    evs = [mk("a", "2026-08-01"), mk("b", "2026-05-01")]
+    assert data_quality(evs)["thin_months"] == ["2026-05", "2026-08"]

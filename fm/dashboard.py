@@ -37,7 +37,7 @@ def build_data(events: list[aggregate.Event], cfg: dict) -> dict:
         for e in sorted(events, key=lambda x: x.date, reverse=True)
     ]
 
-    quality = aggregate.data_quality(events)
+    quality = aggregate.data_quality(events, now_month=datetime.now().strftime('%Y-%m'))
     return {
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "disclaimer": cfg["dashboard"]["disclaimer"],
@@ -54,6 +54,8 @@ def build_data(events: list[aggregate.Event], cfg: dict) -> dict:
             "escape_share": round(quality["escape_share"], 3),
             "escape_counts": quality["escape_counts"],
             "all_zero_share": round(quality["all_zero_share"], 3),
+            "effective_n": quality["effective_n"],
+            "effective_n_axis": quality["effective_n_axis"],
             "grounded_share": round(quality["grounded_share"], 3),
         },
         "reliability": load_reliability(),
@@ -80,7 +82,8 @@ def load_reliability() -> dict | None:
         "coverage": round(rep.get("coverage", 0), 3),
         "axes": {a: {"exact": round(s["exact"], 3), "alpha": s["alpha"]}
                  for a, s in rep["axes"].items()},
-        "same_model": True,  # оба прохода — одна модель; это верхняя граница, не оценка схемы
+        "significance": round(rep["significance"]["exact"], 3),
+        "note": rep.get("note", ""),
     }
 
 

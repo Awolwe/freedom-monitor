@@ -89,10 +89,10 @@
     </div>
   </div>
 
-  <h2>Фазовая траектория поля · 01.2022 — сегодня</h2>
-  <div class="sub">X: давление среды ← → освобождение · Y: эрозия ← → рост пространства возможностей.
-    Квадранты — фроммовская линза (интерпретация, не измерение). ◆ — события significance-3. Пунктир — сегмент веб-дозаполнения.</div>
+  <h2>Где было поле по месяцам</h2>
+  <div class="sub" id="phase-sub"></div>
   <div class="chart-box" id="phase-box"></div>
+  <div class="legend" id="phase-legend"></div>
 
   <h2>Динамика метрик</h2>
   <div class="sub">Линия — Level (EMA), столбики — месячный Flow. Ноль отмечен.</div>
@@ -124,6 +124,10 @@ function el(name, attrs, parent){
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   if (parent) parent.appendChild(e);
   return e;
+}
+function plural(n, one, few, many){            // 1 событие / 2 события / 5 событий
+  const a=Math.abs(n)%100, b=a%10;
+  return n+" "+(a>10&&a<20 ? many : b===1 ? one : b>=2&&b<=4 ? few : many);
 }
 function div(cls, parent){ const d=document.createElement("div"); if(cls)d.className=cls; if(parent)parent.appendChild(d); return d; }
 const AXES = [
@@ -184,8 +188,14 @@ document.getElementById("disclaimer").textContent = DATA.disclaimer;
   const x = last.level_freedom_from, y = last.level_freedom_for;
   const q = x>=0 ? (y>=0?"освобождение и рост":"негативная свобода без опоры")
                  : (y>=0?"развитие без свободы":"сжатие");
-  document.getElementById("quad-name").innerHTML =
-    `Квадрант (фроммовская линза): <b>«${q}»</b> — ${monthLabel(last.month)}`;
+  // та же мёртвая зона, что и на фазовом графике: у нуля знак задаётся выбором
+  // параметров агрегации, поэтому название квадранта там не утверждается
+  const DEAD=0.05, weak=[["по оси давления",x],["по оси возможностей",y]]
+    .filter(([,v])=>Math.abs(v)<DEAD).map(([n])=>n);
+  document.getElementById("quad-name").innerHTML = weak.length
+    ? `Квадрант не определён: значение ${weak.join(" и ")} внутри зоны ±${DEAD}, `+
+      `где знак задаётся выбором параметров, а не данными — ${monthLabel(last.month)}`
+    : `Квадрант (фроммовская линза): <b>«${q}»</b> — ${monthLabel(last.month)}`;
 })();
 
 /* ---------- USD/KZT спарклайн ---------- */
@@ -214,50 +224,123 @@ document.getElementById("disclaimer").textContent = DATA.disclaimer;
   document.getElementById("usd-spark").appendChild(svg);
 })();
 
-/* ---------- фазовая траектория ---------- */
-(function phase(){
-  const W=760,H=560,P=54;
-  const xs=M.map(r=>r.level_freedom_from), ys=M.map(r=>r.level_freedom_for);
-  const dom=Math.max(1, Math.max(...xs.map(Math.abs), ...ys.map(Math.abs))*1.25);
-  const X=v=>P+(W-2*P)*(v+dom)/(2*dom), Y=v=>H-P-(H-2*P)*(v+dom)/(2*dom);
-  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%"});
-  // квадранты
-  el("rect",{x:P,y:P,width:W-2*P,height:H-2*P,fill:"#fbf9f3",stroke:"var(--line)"},svg);
-  el("line",{x1:X(0),y1:P,x2:X(0),y2:H-P,stroke:"#d8d0bf"},svg);
-  el("line",{x1:P,y1:Y(0),x2:W-P,y2:Y(0),stroke:"#d8d0bf"},svg);
-  const ql=[["освобождение и рост",X(dom*0.52),Y(dom*0.86)],["негативная свобода без опоры",X(dom*0.52),Y(-dom*0.9)],
-            ["развитие без свободы",X(-dom*0.55),Y(dom*0.86)],["сжатие",X(-dom*0.55),Y(-dom*0.9)]];
-  for(const [t,x,y] of ql) el("text",{x,y,"font-size":12,fill:"#b4a98f","text-anchor":"middle","font-style":"italic"},svg).textContent=t;
-  el("text",{x:W-P,y:Y(0)-6,"font-size":11.5,fill:"#7a7265","text-anchor":"end"},svg).textContent="освобождение →";
-  el("text",{x:P+2,y:Y(0)-6,"font-size":11.5,fill:"#7a7265"},svg).textContent="← давление";
-  el("text",{x:X(0)+6,y:P+14,"font-size":11.5,fill:"#7a7265"},svg).textContent="↑ возможности растут";
-  el("text",{x:X(0)+6,y:H-P-6,"font-size":11.5,fill:"#7a7265"},svg).textContent="↓ возможности сужаются";
-  // сегменты с градиентом времени
-  const col=i=>{const t=i/(M.length-1);const L=78-t*52;return `hsl(18 45% ${L}%)`;};
-  for(let i=1;i<M.length;i++){
-    el("line",{x1:X(xs[i-1]),y1:Y(ys[i-1]),x2:X(xs[i]),y2:Y(ys[i]),stroke:col(i),"stroke-width":2,
-       ...(hasWeb(M[i].month)?{"stroke-dasharray":"5 4"}:{})},svg);
+/* ---------- лента квадрантов по месяцам ----------
+   Фазовый портрет из 55 наложенных точек не читался: он прячет время, а именно
+   время читателю и нужно. Здесь один прямоугольник — один месяц, слева направо,
+   цвет — квадрант. Отвечает на тот же вопрос, но с одного взгляда.              */
+(function ribbon(){
+  const DEAD=0.05;
+  const QC={
+    "освобождение и рост":       {c:"#5b8c5a", d:"среда свободнее, возможностей больше"},
+    "развитие без свободы":      {c:"#c79a3a", d:"возможностей больше, но среда давит"},
+    "негативная свобода без опоры":{c:"#c8451f", d:"среда свободнее, но возможности сужаются"},
+    "сжатие":                    {c:"#8c3b3b", d:"давление растёт, возможности сужаются"},
+    "у нуля":                    {c:"#c3baa4", d:"слишком близко к нулю, чтобы называть квадрант"},
+  };
+  const quad=r=>{
+    const x=r.level_freedom_from, y=r.level_freedom_for;
+    if(Math.abs(x)<DEAD||Math.abs(y)<DEAD) return "у нуля";
+    return x>=0 ? (y>=0?"освобождение и рост":"негативная свобода без опоры")
+                : (y>=0?"развитие без свободы":"сжатие");
+  };
+
+  // месяцы между концом данных и датой сборки: они существуют, но ещё не покрыты.
+  // Без них лента выглядит несвежей — читатель видит июль и не понимает, август-то где.
+  const nowM=DATA.generated_at.slice(0,7);
+  const pending=[]; let cur=M[M.length-1].month;
+  while(cur<nowM && pending.length<6){
+    let [y,mo]=cur.split("-").map(Number);
+    mo===12 ? (y++, mo=1) : mo++;
+    cur=`${y}-${String(mo).padStart(2,"0")}`;
+    pending.push(cur);
   }
-  // точки + флаги
+
+  const W=780, RH=46, TOP=8, AX=26, H=TOP+RH+AX;
+  const n=M.length+pending.length, cw=(W-2)/n;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%"});
+  const defs=el("defs",{},svg);
+  const pat=el("pattern",{id:"inert",width:6,height:6,patternUnits:"userSpaceOnUse",
+                          patternTransform:"rotate(45)"},defs);
+  el("rect",{width:6,height:6,fill:"#fffdf8",opacity:.42},pat);
+  el("rect",{width:2.4,height:6,fill:"#fffdf8",opacity:.85},pat);
+
   M.forEach((r,i)=>{
-    const web=hasWeb(r.month);
-    const c=el("circle",{cx:X(xs[i]),cy:Y(ys[i]),r: i===M.length-1?6:4,
-      fill:web?"#fff":col(i),stroke:col(i),"stroke-width":web?2:1,cursor:"pointer"},svg);
-    c.addEventListener("mousemove",e=>showTT(monthTooltip(r),e.clientX,e.clientY));
-    c.addEventListener("mouseleave",hideTT);
-    if(r.month.endsWith("-01"))
-      el("text",{x:X(xs[i])+7,y:Y(ys[i])-7,"font-size":11,fill:"#5c5342","font-weight":600},svg).textContent=r.month.slice(0,4);
-    const flags=EV.filter(e=>e.month===r.month&&e.sig===3);
-    if(flags.length){
-      const f=el("path",{d:`M ${X(xs[i])} ${Y(ys[i])-14} l 5 6 l -5 6 l -5 -6 Z`,fill:"var(--flag)",cursor:"pointer",opacity:.85},svg);
-      f.addEventListener("mousemove",e=>showTT(
-        `<div class="t-month">${monthLabel(r.month)} — significance 3</div>`+flags.map(x=>`<div class="t-ev">◆ ${x.title}</div>`).join(""),
+    const q=quad(r), x=1+i*cw;
+    const rect=el("rect",{x,y:TOP,width:cw+.5,height:RH,fill:QC[q].c,
+                          opacity:q==="у нуля"?.55:.85,cursor:"pointer"},svg);
+    rect.addEventListener("mousemove",e=>showTT(
+      monthTooltip(r)+`<div class="t-ev">квадрант: ${q}</div>`+
+      (r.freedom_from===0&&r.freedom_for===0
+        ? `<div class="t-ev">событий по этим осям не было — значение держится памятью сглаживания</div>`:``),
+      e.clientX,e.clientY));
+    rect.addEventListener("mouseleave",hideTT);
+    // месяц без событий по обеим осям — штриховка поверх цвета: он унаследован, а не измерен
+    if(r.freedom_from===0&&r.freedom_for===0){
+      const h=el("rect",{x,y:TOP,width:cw+.5,height:RH,fill:"url(#inert)",cursor:"pointer"},svg);
+      h.addEventListener("mousemove",e=>showTT(
+        monthTooltip(r)+`<div class="t-ev">событий по этим осям не было — цвет унаследован</div>`,
         e.clientX,e.clientY));
-      f.addEventListener("mouseleave",hideTT);
+      h.addEventListener("mouseleave",hideTT);
+    }
+    // текущий месяц ещё идёт: клетка есть, но покрытие неполное
+    if(r.month===nowM)
+      el("rect",{x,y:TOP,width:cw+.5,height:RH,fill:"none",stroke:"#5c5342",
+                 "stroke-width":1.4,"stroke-dasharray":"3 2"},svg);
+    if(EV.some(e=>e.month===r.month&&e.sig===3))
+      el("circle",{cx:x+cw/2,cy:TOP+RH-6,r:2.2,fill:"#fffdf8",opacity:.9},svg);
+    if(r.month.endsWith("-01")){
+      el("line",{x1:x,y1:TOP,x2:x,y2:TOP+RH+5,stroke:"#5c5342","stroke-width":1},svg);
+      el("text",{x:x+3,y:H-8,"font-size":11,fill:"#5c5342","font-weight":600},svg)
+        .textContent=r.month.slice(0,4);
     }
   });
+  pending.forEach((m,k)=>{
+    const x=1+(M.length+k)*cw;
+    el("rect",{x,y:TOP,width:cw+.5,height:RH,fill:"#fffdf8",stroke:"#c9bfa8",
+               "stroke-dasharray":"3 3"},svg);
+    if(m.endsWith("-01")){
+      el("line",{x1:x,y1:TOP,x2:x,y2:TOP+RH+5,stroke:"#5c5342","stroke-width":1},svg);
+      el("text",{x:x+3,y:H-8,"font-size":11,fill:"#5c5342","font-weight":600},svg)
+        .textContent=m.slice(0,4);
+    }
+  });
+  if(pending.length){
+    const x=1+M.length*cw;
+    el("text",{x:x+(W-1-x)/2,y:TOP+RH/2+4,"font-size":10.5,fill:"#9c9280",
+               "text-anchor":"middle"},svg).textContent="идёт";
+  }
+  el("rect",{x:1,y:TOP,width:W-2,height:RH,fill:"none",stroke:"var(--line)"},svg);
+  el("text",{x:W-2,y:H-8,"font-size":11,fill:"#7a7265","text-anchor":"end"},svg)
+    .textContent=monthLabel(M[M.length-1].month)+" — конец данных";
   document.getElementById("phase-box").appendChild(svg);
-  function hasWeb(m){ return EV.some(e=>e.month===m && e.origin==="web_research"); }
+
+  const seen=[...new Set(M.map(quad))];
+  const order=Object.keys(QC).filter(q=>seen.includes(q));
+  const inert=M.filter(r=>r.freedom_from===0&&r.freedom_for===0).length;
+
+  document.getElementById("phase-sub").textContent =
+    `Один прямоугольник — один месяц, слева направо от ${monthLabel(M[0].month)} `+
+    `до ${monthLabel(M[M.length-1].month)}. Цвет — в каком положении было поле.`+
+    (pending.length
+      ? ` Пунктирные клетки справа (${pending.map(monthLabel).join(", ")}) ещё не покрыты: `+
+        `месяц не закончился, событий по кодбуку в нём пока не зафиксировано.`
+      : (M[M.length-1].month===nowM
+         ? ` Последняя клетка обведена пунктиром: ${monthLabel(nowM)} ещё идёт, `+
+           `в нём пока ${plural(M[M.length-1].n_events,"событие","события","событий")} — `+
+           `месяц закроется позже.`
+         : ``));
+
+  document.getElementById("phase-legend").innerHTML =
+    order.map(q=>{
+      const cnt=M.filter(r=>quad(r)===q).length;
+      return `<span style="display:inline-block;margin:0 14px 6px 0">`+
+             `<span style="display:inline-block;width:11px;height:11px;background:${QC[q].c};`+
+             `opacity:${q==="у нуля"?.55:.85};vertical-align:-1px;margin-right:5px"></span>`+
+             `<b>${q}</b> — ${QC[q].d} · ${cnt} мес.</span>`;
+    }).join("") +
+    `<br>Штриховка (${inert} мес.) — месяцы, где по этим двум осям не было ни одного события: `+
+    `цвет унаследован от прошлого, а не измерен. Белая точка — месяц с событием significance-3. `+
+    `Наведите на месяц, чтобы увидеть значения и события.`;
 })();
 
 /* ---------- динамика метрик ---------- */
@@ -390,14 +473,15 @@ document.getElementById("disclaimer").textContent = DATA.disclaimer;
     ? `Надёжность кодирования: двойное кодирование ${rel.n_common} событий (${pct(rel.coverage)} корпуса), ` +
       `точное совпадение по осям ` +
       Object.entries(rel.axes).map(([a,s])=>`${CHIP_LABEL[a]} ${pct(s.exact)}`).join(" · ") +
-      `. <strong>Оба прохода — одна модель</strong>, поэтому это оценка самосогласованности, ` +
-      `а не надёжности схемы: верхняя граница, не свидетельство валидности (RELIABILITY.md).`
+      `, значимость ${pct(rel.significance)}. ` +
+      (rel.note ? `<strong>${rel.note}.</strong> ` : ``) +
+      `Расхождения систематические и указывают на дефекты кодбука, а не на разброс: подробности в RELIABILITY.md.`
     : `Надёжность кодирования не измерена.`;
 
   document.getElementById("footer").innerHTML =
     `Рамка: температура новостного поля, не общество. Ретро — память модели; 02–07.2026 — веб-дозаполнение.<br>
      Диагностика: событий ${q.n_events}, significance-3: ${q.sig3}, доля нулей по осям (${zs})${q.thin_months.length?`, тонкие месяцы: ${q.thin_months.join(", ")}`:""}.<br>
-     Событий без единой ненулевой оси: ${pct(q.all_zero_share)}. Теги механизмов бегства: ${pct(q.escape_share)} событий (${esc}) — кодбук §3 ждёт 5–10%; теги концентрируются в месяцах госконсолидации и потому коррелируют с «давлением среды» по построению.<br>
+     Событий без единой ненулевой оси: ${pct(q.all_zero_share)}; реальная база измерения — ${q.effective_n} из ${q.n_events} (по осям: ${Object.entries(q.effective_n_axis).map(([k,v])=>`${CHIP_LABEL[k]} ${v}`).join(" · ")}). Теги механизмов бегства: ${pct(q.escape_share)} событий (${esc}) — кодбук §3 ждёт 5–10%; теги концентрируются в месяцах госконсолидации и потому коррелируют с «давлением среды» по построению.<br>
      Заземление на источник: URL есть у ${pct(q.grounded_share)} событий — у остальных подтверждения нет, это память модели.<br>
      ${relLine}<br>
      Кодбук: METHODOLOGY.md, prompt_version ${DATA.prompt_version}. EMA α=${DATA.alpha_month}. Квадрантная гипотеза предрегистрирована (§6) и в скоринге не участвует.`;
